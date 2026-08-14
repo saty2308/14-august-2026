@@ -1,74 +1,40 @@
-trigger:
-  branches:
-    include:
-      - feature/*
+name: Terraform CI
 
-pr:
-  branches:
-    include:
-      - feature/*
+on:
+  push:
+    branches:
+      - 'feature/**'
 
-pool:
-  vmImage: 'ubuntu-latest'
+  pull_request:
+    branches:
+      - 'feature/**'
 
-variables:
-  terraformVersion: '1.9.8'
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
 
-steps:
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-# Install Terraform
-- task: TerraformInstaller@1
-  displayName: "Install Terraform"
-  inputs:
-    terraformVersion: $(terraformVersion)
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
 
-# Azure Login
-- task: AzureCLI@2
-  displayName: "Azure Login"
-  inputs:
-    azureSubscription: 'Azure-Service-Connection'   # Change this
-    scriptType: bash
-    scriptLocation: inlineScript
-    inlineScript: |
-      echo "Logged into Azure"
-      az account show
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-# Terraform Init
-- task: AzureCLI@2
-  displayName: "Terraform Init"
-  inputs:
-    azureSubscription: 'Azure-Service-Connection'
-    scriptType: bash
-    scriptLocation: inlineScript
-    inlineScript: |
-      terraform init
+      - name: Verify Azure Login
+        run: az account show
 
-# Terraform Format Check
-- task: AzureCLI@2
-  displayName: "Terraform Format Check"
-  inputs:
-    azureSubscription: 'Azure-Service-Connection'
-    scriptType: bash
-    scriptLocation: inlineScript
-    inlineScript: |
-      terraform fmt -check -recursive
+      - name: Terraform Init
+        run: terraform init
 
-# Terraform Validate
-- task: AzureCLI@2
-  displayName: "Terraform Validate"
-  inputs:
-    azureSubscription: 'Azure-Service-Connection'
-    scriptType: bash
-    scriptLocation: inlineScript
-    inlineScript: |
-      terraform validate
+      - name: Terraform Validate
+        run: terraform validate
 
-# Terraform Plan
-- task: AzureCLI@2
-  displayName: "Terraform Plan"
-  inputs:
-    azureSubscription: 'Azure-Service-Connection'
-    scriptType: bash
-    scriptLocation: inlineScript
-    inlineScript: |
-      terraform plan -out=tfplan
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan
