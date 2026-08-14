@@ -1,0 +1,74 @@
+trigger:
+  branches:
+    include:
+      - feature/*
+
+pr:
+  branches:
+    include:
+      - feature/*
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  terraformVersion: '1.9.8'
+
+steps:
+
+# Install Terraform
+- task: TerraformInstaller@1
+  displayName: "Install Terraform"
+  inputs:
+    terraformVersion: $(terraformVersion)
+
+# Azure Login
+- task: AzureCLI@2
+  displayName: "Azure Login"
+  inputs:
+    azureSubscription: 'Azure-Service-Connection'   # Change this
+    scriptType: bash
+    scriptLocation: inlineScript
+    inlineScript: |
+      echo "Logged into Azure"
+      az account show
+
+# Terraform Init
+- task: AzureCLI@2
+  displayName: "Terraform Init"
+  inputs:
+    azureSubscription: 'Azure-Service-Connection'
+    scriptType: bash
+    scriptLocation: inlineScript
+    inlineScript: |
+      terraform init
+
+# Terraform Format Check
+- task: AzureCLI@2
+  displayName: "Terraform Format Check"
+  inputs:
+    azureSubscription: 'Azure-Service-Connection'
+    scriptType: bash
+    scriptLocation: inlineScript
+    inlineScript: |
+      terraform fmt -check -recursive
+
+# Terraform Validate
+- task: AzureCLI@2
+  displayName: "Terraform Validate"
+  inputs:
+    azureSubscription: 'Azure-Service-Connection'
+    scriptType: bash
+    scriptLocation: inlineScript
+    inlineScript: |
+      terraform validate
+
+# Terraform Plan
+- task: AzureCLI@2
+  displayName: "Terraform Plan"
+  inputs:
+    azureSubscription: 'Azure-Service-Connection'
+    scriptType: bash
+    scriptLocation: inlineScript
+    inlineScript: |
+      terraform plan -out=tfplan
