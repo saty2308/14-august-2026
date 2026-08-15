@@ -8,7 +8,6 @@ rgs = {
     location = "centralindia"
   }
 }
-
 vnets = {
   vnet1 = {
     name                = "vnet-chor-dev"
