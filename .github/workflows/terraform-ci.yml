@@ -40,17 +40,18 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       # Terraform Format Check
-      - name: Terraform Format Check
-        run: terraform fmt -check -recursive
+      - - name: Terraform Format Check
+          working-directory: ./di-b18-infra
+          run: terraform fmt -check -recursive
 
-      # Terraform Init
-      - name: Terraform Init
-        run: terraform init
+          name: Terraform Init
+          working-directory: ./di-b18-infra
+          run: terraform init
 
-      # Terraform Validate
-      - name: Terraform Validate
-        run: terraform validate
+          name: Terraform Validate
+          working-directory: ./di-b18-infra
+          run: terraform validate
 
-      # Terraform Plan
-      - name: Terraform Plan
-        run: terraform plan
+          name: Terraform Plan
+          working-directory: ./di-b18-infra
+          run: terraform plan
