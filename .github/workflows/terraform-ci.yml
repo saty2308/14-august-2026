@@ -3,39 +3,54 @@ name: Terraform CI
 on:
   push:
     branches:
-      - feature
+      - 'feature/**'
+
   pull_request:
     branches:
-      - feature
+      - main
+
+permissions:
+  contents: read
 
 jobs:
-  terraform-ci:
+  terraform:
+    name: Terraform Plan
     runs-on: ubuntu-latest
 
     defaults:
       run:
-        working-directory: ./di-b18-infra/environments/preprod
+        working-directory: ./di-b18-infra
 
     steps:
-      - name: Checkout Code
+
+      # Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
+      # Install Terraform
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.5
+
+      # Azure Login
       - name: Azure Login
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-
-      - name: Terraform Init
-        run: terraform init
-
+      # Terraform Format Check
       - name: Terraform Format Check
         run: terraform fmt -check -recursive
 
+      # Terraform Init
+      - name: Terraform Init
+        run: terraform init
+
+      # Terraform Validate
       - name: Terraform Validate
         run: terraform validate
 
+      # Terraform Plan
       - name: Terraform Plan
         run: terraform plan
