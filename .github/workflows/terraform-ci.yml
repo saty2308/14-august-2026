@@ -1,127 +1,41 @@
-```yaml
-trigger:
-  branches:
-    include:
+name: Terraform CI
+
+on:
+  push:
+    branches:
       - main
+      - feature
+  pull_request:
 
-pool:
-  vmImage: 'ubuntu-latest'
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
 
-variables:
-  # Terraform root module
-  terraformWorkingDirectory: '$(System.DefaultWorkingDirectory)/di-b18-infra/environments/preprod'
+    env:
+      TF_WORKING_DIR: di-b18-infra/environments/preprod
 
-  # Terraform version
-  terraformVersion: 'latest'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-  # Replace this with your actual Azure DevOps Service Connection name
-  azureServiceConnection: 'YOUR-AZURE-SERVICE-CONNECTION'
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: latest
 
-stages:
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-# ============================================================
-# TERRAFORM PLAN - PREPROD
-# ============================================================
+      - name: Terraform Init
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform init
 
-- stage: TerraformPlan
-  displayName: 'Terraform Plan - Preprod'
+      - name: Terraform Validate
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform validate
 
-  jobs:
-    - job: TerraformPlan
-      displayName: 'Terraform Plan'
-
-      steps:
-
-        # ======================================================
-        # CHECKOUT
-        # ======================================================
-
-        - checkout: self
-          displayName: 'Checkout Repository'
-          clean: true
-
-        # ======================================================
-        # SETUP TERRAFORM
-        # ======================================================
-
-        - task: TerraformInstaller@1
-          displayName: 'Setup Terraform'
-          inputs:
-            terraformVersion: '$(terraformVersion)'
-
-        # ======================================================
-        # CHECK TERRAFORM VERSION
-        # ======================================================
-
-        - script: |
-            terraform version
-          displayName: 'Terraform Version'
-
-        # ======================================================
-        # CHECK TERRAFORM FILES
-        # ======================================================
-
-        - script: |
-            echo "Terraform Working Directory:"
-            echo "$(terraformWorkingDirectory)"
-
-            echo ""
-            echo "Terraform files:"
-            find "$(terraformWorkingDirectory)" -maxdepth 1 -type f -name "*.tf" -print
-          displayName: 'Check Terraform Configuration'
-
-        # ======================================================
-        # TERRAFORM FORMAT
-        # ======================================================
-
-        - task: TerraformCLI@1
-          displayName: 'Terraform Format Check'
-          inputs:
-            command: 'fmt'
-            workingDirectory: '$(terraformWorkingDirectory)'
-            commandOptions: '-check'
-
-        # ======================================================
-        # TERRAFORM INIT
-        # ======================================================
-
-        - task: TerraformCLI@1
-          displayName: 'Terraform Init'
-          inputs:
-            command: 'init'
-            workingDirectory: '$(terraformWorkingDirectory)'
-            environmentServiceNameAzureRM: '$(azureServiceConnection)'
-
-        # ======================================================
-        # TERRAFORM VALIDATE
-        # ======================================================
-
-        - task: TerraformCLI@1
-          displayName: 'Terraform Validate'
-          inputs:
-            command: 'validate'
-            workingDirectory: '$(terraformWorkingDirectory)'
-
-        # ======================================================
-        # TERRAFORM PLAN
-        # ======================================================
-
-        - task: TerraformCLI@1
-          displayName: 'Terraform Plan'
-          inputs:
-            command: 'plan'
-            workingDirectory: '$(terraformWorkingDirectory)'
-            environmentServiceNameAzureRM: '$(azureServiceConnection)'
-            commandOptions: '-out=tfplan'
-
-        # ======================================================
-        # PUBLISH TERRAFORM PLAN
-        # ======================================================
-
-        - task: PublishPipelineArtifact@1
-          displayName: 'Publish Terraform Plan'
-          inputs:
-            targetPath: '$(terraformWorkingDirectory)/tfplan'
-            artifact: 'terraform-plan-preprod'
-            publishLocation: 'pipeline'
-```
+      - name: Terraform Plan
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform plan
